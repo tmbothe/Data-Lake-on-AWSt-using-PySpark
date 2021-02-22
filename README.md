@@ -17,7 +17,7 @@ The purpose of the project is to analyze the tourists frequency in the USA by  m
 ## Explore and Assess the Data
 
 ### immigration Dataset
-![image](https://raw.githubusercontent.com/tmbothe/ETL-FROM-S3-To-Redshift-using-Spark/main/images/immigration_summary.png)
+![image](https://raw.githubusercontent.com/tmbothe/ETL-FROM-S3-To-Redshift-using-Spark/main/images/immigration_summary.PNG)
 We are going to explore as subset of immigration data for april 2016.  As we can see on the picture above, it has 3 096 313 rows and columns. Here are some observations:
 - The field **I94ADDR** is the state destination of the tourist, we see that that column has about 152 592 missing values
 - We see that **i94mode** which is the mode by which the tourist entered the USA territory has missing values as well.
@@ -25,11 +25,11 @@ We are going to explore as subset of immigration data for april 2016.  As we can
 - We see that the **cicid** column that has information about each tourist is Unique , so there is no duplicated data
 
 ### Demographic Dataset
-![image](https://raw.githubusercontent.com/tmbothe/ETL-FROM-S3-To-Redshift-using-Spark/main/images/demographic_summary.png)
+![image](https://raw.githubusercontent.com/tmbothe/ETL-FROM-S3-To-Redshift-using-Spark/main/images/demographic_summary.PNG)
 This dataset has information about the distribution of the population in different USA city by race.  The file has about 2891 rows, and has only few missing values as we can see on the image above.
 
 ### Airport DataSet
-![image](https://raw.githubusercontent.com/tmbothe/ETL-FROM-S3-To-Redshift-using-Spark/main/images/airport_summary.png)
+![image](https://raw.githubusercontent.com/tmbothe/ETL-FROM-S3-To-Redshift-using-Spark/main/images/airport_summary.PNG)
 As we can see on the immage above, this file has about 55075 rows of diffent airport code in the USA and their coordinates.
 
 ## Data Model
