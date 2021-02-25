@@ -3,10 +3,11 @@ In this project, we are going to use boto3 sdk to load files from our local envi
 
 ## Scope the Project and Data Gathering
 
+
 The project is built with data coming from 3 different sources:
-- **I94 Immigration Data:** This data comes from the US National Tourism and Trade Office here(https://travel.trade.gov/research/reports/i94/historical/2016.html). The dataset has information about tourists coming to the USA. Where they are coming from, their age, the length of their stay, the type of visa etc..
+- **I94 Immigration Data:** This data comes from the US National Tourism and Trade Office [here] (https://travel.trade.gov/research/reports/i94/historical/2016.html). The dataset has information about tourists coming to the USA. Where they are coming from, their age, the length of their stay, the type of visa etc..
 - **U.S. City Demographic Data:** This dataset has information about US population in different state by  race, gender .
-- **Airport Code Table:** This is the table of airport codes and corresponding cities. It comes from here(https://datahub.io/core/airport-codes#data).
+- **Airport Code Table:** This is the table of airport codes and corresponding cities. It comes from [here] (https://datahub.io/core/airport-codes#data).
 
 The purpose of the project is to analyze the tourists frequency in the USA by  month and answer the following questions:
 - Analyze in which month we should expect more tourists
@@ -68,7 +69,7 @@ We this level of details, we should be able to answer different questions regard
 ## Installation 
 
 - Install [python 3.8](https://www.python.org)
-- Install [Apache pyspark](hhttps://pypi.org/project/pyspark/)
+- Install [Apache pyspark](https://towardsdatascience.com/working-with-apache-spark-python-and-pyspark-128a82668e67)
 - Clone the current repository. 
 - Create IAM user in AWS and get the user access key and secret key.
 - Fill the dl.cfg with the access and secret key
