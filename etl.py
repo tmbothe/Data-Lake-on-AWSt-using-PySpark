@@ -18,10 +18,23 @@ def create_spark_session():
     """
     Create the spark session , entry point of the program
     """
-    spark = SparkSession.builder\
-        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0")\
-        .getOrCreate()
+    spark = SparkSession.builder.\
+    config("spark.jars.packages","saurfang:spark-sas7bdat:2.0.0-s_2.11")\
+    .enableHiveSupport().getOrCreate()
     return spark
+
+#udf to convert sas date
+sas_date_udf = udf(lambda x: x if x is None else (timedelta(days=x) + datetime(1960, 1, 1)).strftime(date_format))
+
+def convert_sas_date(df, cols):
+    """
+      Convert date from SAS date (number of days since 1/1/1960) to datetime 
+      :param date: string, timedelta, list, tuple, 1-d array, or Series of SAS date(s) 
+      :return: corresponding datetime date(s) 
+    """
+    for c in [c for c in cols if c in df.columns]:
+        df = df.withColumn(c, sas_date_udf(df[c]))
+    return df
 
 def read_data(spark,input_data,format='csv',columns='*',test_size=None,**options):
     """[summary]
@@ -108,21 +121,112 @@ def process_demographic_data(spark,input_data,output_path,test_size=None,**optio
     save_data(demographic_df,output_path,mode="overwrite",out_format='parquet',columns=columns,**options)
 
 
+def process_immigration_data(spark,input_data,format='csv',mode="overwrite",columns='*',test_size=None,**options):
+    
+    df_spark =spark.read.format('com.github.saurfang.sas.spark').load(input_data)
 
+    #convert sas date to date
+    cols =['arrdate','depdate']
+    df_spark = convert_sas_date(df_spark,cols)
+   
+    df_spark = df_spark.withColumn("arrdate",df_spark['arrdate'].cast(DateType()))
+    df_spark = df_spark.withColumn("depdate",df_spark['depdate'].cast(DateType()))
+
+
+    columns = ['tourist_id','year','month','i94cit','i94res','port_arrival','arrival_date','arrival_mode','entry_state',
+                'departure_date','age','visa_code','count','register_date','visa_post','arrival_flag','departure_flag','status_flag',
+                'match_flag','birth_year','dtaddto','gender','airline_code','admission_num','flight_num','vista_type']
+    
+
+    #renaming columns
+    df_spark = df_spark.withColumnRenamed('cicid','tourist_id'). \
+    withColumnRenamed('i94yr','year'). \
+    withColumnRenamed('i94mon','month'). \
+    withColumnRenamed('i94cit','i94cit'). \
+    withColumnRenamed('i94res','i94res'). \
+    withColumnRenamed('i94port','port_arrival'). \
+    withColumnRenamed('arrdate','arrival_date'). \
+    withColumnRenamed('i94mode','arrival_mode'). \
+    withColumnRenamed('i94addr','entry_state'). \
+    withColumnRenamed('depdate','departure_date'). \
+    withColumnRenamed('i94bir','age'). \
+    withColumnRenamed('i94visa','visa_code'). \
+    withColumnRenamed('dtadfile','register_date'). \
+    withColumnRenamed('visapost','visa_post'). \
+    withColumnRenamed('entdepa','arrival_flag'). \
+    withColumnRenamed('entdepd','departure_flag'). \
+    withColumnRenamed('entdepu','status_flag'). \
+    withColumnRenamed('matflag','match_flag'). \
+    withColumnRenamed('biryear','birth_year'). \
+    withColumnRenamed('dtaddto','dtaddto'). \
+    withColumnRenamed('gender','gender'). \
+    withColumnRenamed('airline','airline_code'). \
+    withColumnRenamed('admnum','admission_num').\
+    withColumnRenamed('fltno','flight_num').\
+    withColumnRenamed('visatype','vista_type')
+
+    df_spark=df_spark.select(columns)
+
+    # saving data
+    save_data(df_spark,output_path,mode=mode,out_format='parquet',columns=columns,**options)
+    
+    
+def process_all_files(input_path,output_path):
+    
+    sas_files = [os.path.join(input_path, f) for f in os.listdir(input_path) if f.endswith('.sas7bdat')]
+    
+    for file in sas_files:
+        try:
+            #tif spark.read.load(output_path).count() >0:
+            process_immigration_data(spark,file,mode="append",format='sas7bdat',partitionBy=["year","month"],columns='*',test_size=None)
+        except:
+            process_immigration_data(spark,file,mode="overwrite",format='sas7bdat',partitionBy=["year","month"],columns='*',test_size=None)
+   
+  
+def process_time_table(spark,immigration_path,time_output):
+    df = spark.read.parquet(immigration_path)
+    arrival_date= df.withColumn("arrival_date",df['arrival_date'].cast(DateType())).distinct()
+    departure_date= df.withColumn("departure_date",df['departure_date'].cast(DateType())).distinct()
+    time_table = arrival_date.union(departure_date)
+    
+    # write time table to parquet files partitioned by year and month
+    time_table = df.select('arrival_date').withColumn('day',dayofmonth('arrival_date'))
+    time_table = time_table.withColumn('week',weekofyear('arrival_date'))
+    time_table = time_table.withColumn('month',month('arrival_date'))
+    time_table = time_table.withColumn('year',year('arrival_date'))
+    time_table = time_table.withColumn("dayofweek", dayofweek('arrival_date'))
+    time_table=time_table.dropDuplicates()
+    time_table=time_table.withColumnRenamed('arrival_date', 'date')
+    # write time table to parquet files partitioned by year and month
+    # saving data
+   
+    save_data(time_table,time_output,mode="overwrite",out_format='parquet',partitionBy=["year","month"])
+    
 
 
 def main():
     spark = create_spark_session()
-    #input_data="s3a://thim-bucket-2022/data/airport-codes_csv.csv"
-    #output_path="s3a://immigration-schema/airport.parquet"
+    
+    #process airport files
     input_data="./data/airport-codes_csv.csv" 
     output_path="./data/airport.parquet"
-    #process_airport_data(spark,input_data,output_path,test_size=None,header=True)
-
+    process_airport_data(spark,input_data,output_path,test_size=None,header=True)
+    
+    #Process demographic file
     input_data="./data/us-cities-demographics.csv" 
     output_path="./data/demographic.parquet"
     process_demographic_data(spark,input_data,output_path,test_size=None,header=True,delimiter=';')
     
+    #Process immingration file
+    input_path = '../../data/18-83510-I94-Data-2016'
+    output_path="./data/immigration.parquet"
+    process_all_files(input_path,output_path)
+
+    #Process time
+    immigration_path ="./data/immigration.parquet"
+    time_output= "./data/time.parquet"
+    process_time_table(spark,immigration_path,time_output)
+
 
 
 if __name__=='__main__':
